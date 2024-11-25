@@ -1,9 +1,11 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main() {
   runApp(MyApp());
+  //windowManager.setAsFrameless();
 }
 
 class MyApp extends StatelessWidget {
@@ -20,73 +22,33 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 57, 159, 255)),
         ),
-        home: MyHomePage(),
+        home: HomePage(),
       ),
     );
   }
 }
 
 class MyAppState extends ChangeNotifier {
-    var current = WordPair.random();
-  void getNext(){
-    current = WordPair.random();
-    notifyListeners();
- }
+  var notes = <String>[];
+  final TextEditingController controller = TextEditingController();
 
-  var favorites = <WordPair>[];
-  void toggleFavorite(){
-    if (favorites.contains(current)){
-      favorites.remove(current);
-    }else{
-      favorites.add(current);
-    }
+  void addNote(String note){
+    notes.add(note);
     notifyListeners();
   }
-
 }
 
-class MyHomePage extends StatefulWidget {
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0;
-
-
+class HomePage extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
-    Widget page;
-    switch (selectedIndex){
-      case 0:
-        page = GeneratorPage();
-      case 1:
-        page = FavoritesPage();
-      default:
-       throw UnimplementedError('no widget for $selectedIndex');
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         return Scaffold(
           body: Row(
             children: [
-              SafeArea(child: NavigationRail(
-                extended: constraints.maxWidth >= 600,
-                destinations:[
-                  NavigationRailDestination(icon: Icon(Icons.home), label: Text('home')),
-                  NavigationRailDestination(icon: Icon(Icons.favorite), label: Text('Favorites')),
-                ],
-                selectedIndex: selectedIndex,
-                onDestinationSelected: (value){
-                  setState(() {
-                    selectedIndex = value;
-                  });
-                },
-              )),
               Expanded(child: Container(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                child: page,
+                child: NotesPage(),
               )),
             ],
           ),
@@ -96,104 +58,58 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class GeneratorPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var pair = appState.current;
 
-    IconData icon;
-    if(appState.favorites.contains(pair)){
-      icon = Icons.favorite;
-    } else{
-      icon = Icons.favorite_border;
-    }
-    return Center(child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-      BigCard(pair: pair),
-      SizedBox(height:10),
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ElevatedButton.icon(onPressed: (){
-            appState.toggleFavorite();
-            }, 
-            icon: Icon(icon),
-            label:Text('Like')),
-          SizedBox(width:15,),
-          ElevatedButton(
-            onPressed: (){
-              appState.getNext();
-            },
-            child: Text('Next'),
-          ),
-        ],
-      ),
-    ],),);
-  }
-}
-
-class FavoritesPage extends StatelessWidget {
+class NotesPage extends StatelessWidget{
   @override
   Widget build(BuildContext context){
     var appState = context.watch<MyAppState>();
-
-    if (appState.favorites.isEmpty){
-      return Center(child:Text('no favorites yet'));
+    var icon = Icons.add;
+    final children = <Widget>[];
+    children.add(      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ElevatedButton.icon(onPressed: (){
+              appState.addNote("");
+            }, 
+            icon: Icon(icon),
+            label:Text('Add note')),
+        ],
+      ),);
+      children.add(      SizedBox(height:10),);
+    
+    var l = appState.notes.length;
+    
+    for (var i = 0; i < l; i++){
+      appState.controller.text = "aa";
+      children.add(Row(
+        mainAxisSize: MainAxisSize.min,
+        children:[
+          Expanded(flex: 5,
+            child: EditableText(
+              controller: appState.controller,
+              focusNode: FocusNode(),
+              style:TextStyle(color: Colors.black),
+              cursorColor: Colors.red,
+              backgroundCursorColor: Colors.black,
+          ),),
+          Expanded(flex: 1,
+          child:Container(
+            height: 50.0,
+            width: 150.0,
+            child: TextButton(
+              child: Icon(Icons.edit),
+              onPressed: ()           {
+              appState.addNote("");
+          },
+            ),
+          ),
+          ),
+        ],
+      ),);
     }
-
-    return ListView(
-      children: [
-        Padding(
-        padding: const EdgeInsets.all(20),
-        child:Text('You have ' '${appState.favorites.length} favorites'),
-        ),
-        for (var pair in appState.favorites)
-          ListTile(
-            leading:Icon(Icons.favorite),
-            title: Text(pair.asLowerCase),
-          )
-      ],
-      );
-  }
-}
-
-abstract class ListItem{
-  Widget buildWord(BuildContext context);
-}
-
-class FavoriteItem implements ListItem {
-  final WordPair pair;
-  FavoriteItem(this.pair);
-  @override buildWord(BuildContext context) => Text(pair.asString);
-}
-
-
-
-
-
-
-class BigCard extends StatelessWidget {
-  const BigCard({
-    super.key,
-    required this.pair,
-  });
-
-  final WordPair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.copyWith(
-      color: theme.colorScheme.onPrimary,
-    );
-    return Card(
-      color: theme.colorScheme.primary,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Text(pair.asLowerCase, style: style, semanticsLabel: "${pair.first} ${pair.second}",),
-        
+        return Center(child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: children,
       ),
     );
   }
